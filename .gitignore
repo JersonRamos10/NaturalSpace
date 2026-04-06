@@ -40,3 +40,7 @@ project.lock.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Sensitive Configuration
+**/appsettings.*.json
+!**/appsettings.*.example.json
