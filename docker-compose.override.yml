@@ -1,0 +1,11 @@
+# Este archivo se usa para sobrescribir configuraciones en desarrollo
+# Las configuraciones principales están en docker-compose.yml
+#
+# Para ejecutar:
+#   docker-compose up -d           (usa ambos archivos automáticamente)
+#   docker-compose -f docker-compose.yml up -d  (solo archivo base)
+#
+# Para ver logs:
+#   docker-compose logs -f naturalspaceapi
+#   docker-compose logs -f postgres
+#

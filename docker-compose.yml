@@ -1,0 +1,64 @@
+services:
+  # Servicio de la API
+  naturalspaceapi:
+    image: ${DOCKER_REGISTRY-}naturalspaceapi
+    container_name: naturalspace-api
+    build:
+      context: .
+      dockerfile: NaturalSpaceApi/Dockerfile
+    environment:
+      # Configuración de ASP.NET Core
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081
+      # Connection String para SQL Server
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=NspacesDb;User Id=sa;Password=Sudo123!;TrustServerCertificate=True;
+      # Opcional: habilitar migraciones automáticas (no recomendado para producción)
+      - ASPNETCORE_AUTO_MIGRATE=true
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - naturalspace-network
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+      - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
+      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+    restart: unless-stopped
+
+  # Servicio de SQL Server
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: naturalspace-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=Sudo123!
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      # Volumen para persistencia de datos
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - naturalspace-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'Sudo123!' -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+# Volúmenes para persistencia de datos
+volumes:
+  sqlserver_data:
+    driver: local
+
+# Red para comunicación entre contenedores
+networks:
+  naturalspace-network:
+    driver: bridge

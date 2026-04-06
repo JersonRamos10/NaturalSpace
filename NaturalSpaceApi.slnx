@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Solution Items/" />
+  <Folder Name="/src/">
+    <Project Path="NaturalSpaceApi.Application/NaturalSpaceApi.Application.csproj" />
+    <Project Path="NaturalSpaceApi.Domain/NaturalSpaceApi.Domain.csproj" />
+    <Project Path="NaturalSpaceApi.Infraestructure/NaturalSpaceApi.Infrastructure.csproj" />
+    <Project Path="NaturalSpaceApi/NaturalSpaceApi.csproj" />
+  </Folder>
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
+</Solution>
