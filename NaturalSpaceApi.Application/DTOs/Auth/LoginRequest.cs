@@ -4,7 +4,10 @@ using System.Text;
 
 namespace NaturalSpaceApi.Application.DTOs.Auth
 {
-    public class CreateUserRequest
-    {
-    }
+    public sealed record LoginRequest(
+        string? UserName,
+        string? Email,
+        string Password
+    );
+   
 }

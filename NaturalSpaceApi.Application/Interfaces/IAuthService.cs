@@ -1,12 +1,13 @@
-﻿using NaturalSpaceApi.Application.DTOs.Auth;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using NaturalSpaceApi.Application.DTOs;
+using NaturalSpaceApi.Application.DTOs.Auth;
+
 
 namespace NaturalSpaceApi.Application.Interfaces
 {
     public interface IAuthService
     {
-        Task<UserResponse> RegisterAsync (CreateUserRequest userRequest);
+        Task<UserResponse> RegisterAsync (RegisterRequest registerRequest);
+
+        Task<AuthResponse> LoginAsync(LoginRequest loginRequest);
     }
 }

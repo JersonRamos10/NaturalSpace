@@ -6,19 +6,19 @@ namespace NaturalSpaceApi.Domain.Entities
 {
     public class User
     {
-        public Guid Id { get; private set; } 
+        public Guid Id { get; set; } = Guid.NewGuid();
 
-        public string Name { get; private set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
 
-        public string UserName { get; private set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
 
-        public string Email { get; private set; } = string.Empty; 
+        public string Email { get; set; } = string.Empty; 
 
-        public string PasswordHash { get; private set; } = string.Empty;
+        public string PasswordHash { get; set; } = string.Empty;
 
         public string? AvatarUrl { get; set; }
 
-        public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         //relaciones 1:N
         public ICollection<UserWorkSpace> UserWorkSpaces { get; set; } = [];
@@ -28,9 +28,5 @@ namespace NaturalSpaceApi.Domain.Entities
         public ICollection<Message> Messages { get; set; } = [];
 
         public ICollection<File> Files { get; set; } = [];
-
-        private User() { } // Para EF Core
-
-        
     }
 }

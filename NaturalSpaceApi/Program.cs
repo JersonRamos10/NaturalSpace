@@ -1,6 +1,14 @@
+using FluentValidation;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using NaturalSpaceApi.Application.DTOs.Auth;
+using NaturalSpaceApi.Application.Interfaces;
+using NaturalSpaceApi.Application.Services;
+using NaturalSpaceApi.Application.Validators;
+using NaturalSpaceApi.Extensions;
 using NaturalSpaceApi.Infrastructure.Data.Context;
-using Microsoft.EntityFrameworkCore.SqlServer;
+using NaturalSpaceApi.Infrastructure.Options;
+using NaturalSpaceApi.Middleware;
 
 namespace NaturalSpaceApi
 {
@@ -10,32 +18,40 @@ namespace NaturalSpaceApi
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-
             builder.Services.AddControllers();
-
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
 
-            //configuracion de la base de datos
+            builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+            builder.Services.AddProblemDetails();
+
             builder.Services.AddDbContext<NaturalSpaceContext>(options =>
             {
                 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
                 options.UseSqlServer(connectionString);
             });
 
+            builder.Services.Configure<JwtOptions>(
+                    builder.Configuration.GetSection("Jwt"));
+
+            builder.Services.AddScoped<IValidator<RegisterRequest>, RegisterRequestValidator>();
+            builder.Services.AddScoped<IValidator<LoginRequest>, LoginRequestValidator>();
+
+            builder.Services.AddJwtAuthentication(builder.Configuration);
+
+            builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<ITokenService, TokenService>();
+
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
+            app.UseExceptionHandler();
+
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
             }
 
-            app.UseHttpsRedirection();
-
+            app.UseAuthentication();
             app.UseAuthorization();
-
 
             app.MapControllers();
 

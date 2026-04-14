@@ -4,13 +4,13 @@ using System.Text;
 
 namespace NaturalSpaceApi.Application.DTOs.Auth
 {
-    public sealed record UserResponse
+    public sealed record RegisterRequest
     (
-        Guid Id,
         string Name,
         string UserName,
         string Email,
-        string AvatarUrl,
-        DateTime CreatedAt
+        string Password,
+        string ConfirmPassword,
+        string? AvatarUrl
     );
 }

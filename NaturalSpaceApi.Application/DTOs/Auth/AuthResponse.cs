@@ -4,7 +4,8 @@ using System.Text;
 
 namespace NaturalSpaceApi.Application.DTOs
 {
-    public class AuthResponse
-    {
-    }
+    public sealed record AuthResponse(
+     string Token,
+     DateTime Expiration
+    );
 }

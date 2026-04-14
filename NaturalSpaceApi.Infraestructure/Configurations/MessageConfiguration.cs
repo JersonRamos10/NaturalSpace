@@ -19,7 +19,7 @@ namespace NaturalSpaceApi.Infrastructure.Configurations
                 .IsRequired()
                 .HasMaxLength(4000);
 
-            builder.Property(m => m.UpdateAt)
+            builder.Property(m => m.UpdatedAt)
                 .IsRequired();
 
             builder.Property(m => m.CreatedAt)
