@@ -1,10 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System;
 
 namespace NaturalSpaceApi.Application.DTOs.Channel
 {
-    public class ChannelResponse
-    {
-    }
+    public sealed record ChannelResponse
+    (
+        Guid Id,
+        string Name,
+        bool IsPrivate,
+        DateTime CreatedAt,
+        Guid CreatedById,
+        Guid WorkSpaceId
+    );
 }

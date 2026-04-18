@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System;
 
 namespace NaturalSpaceApi.Application.DTOs.Channel
 {
-    public class UpdateChannelRequest
-    {
-    }
+    public sealed record UpdateChannelRequest
+    (
+        string? Name = null,
+        bool? IsPrivate = null
+    );
 }

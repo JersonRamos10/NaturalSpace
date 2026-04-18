@@ -86,7 +86,7 @@ namespace NaturalSpaceApi.Application.Services
             return workspace.Adapt<WorkspaceResponse>();
         }
 
-        public async Task<WorkspaceResponse> UpdateWorkspace(Guid workspaceId, UpdateWorkspaceRequest resquest)
+        public async Task<WorkspaceResponse> UpdateWorkspace(Guid workspaceId, UpdateWorkspaceRequest request)
         {
             var workspace = await _context.WorkSpaces.FindAsync(workspaceId);
 
@@ -97,8 +97,8 @@ namespace NaturalSpaceApi.Application.Services
 
             //update the workspace properties
 
-            workspace.Name = resquest.Name ?? workspace.Name;
-            workspace.Description = resquest.Description ?? workspace.Description;
+            workspace.Name = request.Name ?? workspace.Name;
+            workspace.Description = request.Description ?? workspace.Description;
             workspace.UpdatedAt = DateTime.UtcNow;  
 
             await _context.SaveChangesAsync();

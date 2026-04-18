@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -14,7 +14,7 @@ namespace NaturalSpaceApi.Domain.Entities
 
         public bool IsDeleted { get; set; }
 
-        public DateTime? DeletedAt { get; private set; } 
+        public DateTime? DeletedAt { get; set; } 
         public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
 
         // navegaciones

@@ -1,10 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace NaturalSpaceApi.Application.DTOs.Channel
 {
-    public class CreateChannelRequest
-    {
-    }
+    public sealed record CreateChannelRequest
+    (
+        string Name,
+        bool IsPrivate = false
+    );
 }

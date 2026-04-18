@@ -2,6 +2,8 @@ using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using NaturalSpaceApi.Application.DTOs.Auth;
+using NaturalSpaceApi.Application.DTOs.Channel;
+using NaturalSpaceApi.Application.DTOs.Workspace;
 using NaturalSpaceApi.Application.Interfaces;
 using NaturalSpaceApi.Application.Services;
 using NaturalSpaceApi.Application.Validators;
@@ -35,11 +37,16 @@ namespace NaturalSpaceApi
 
             builder.Services.AddScoped<IValidator<RegisterRequest>, RegisterRequestValidator>();
             builder.Services.AddScoped<IValidator<LoginRequest>, LoginRequestValidator>();
+            builder.Services.AddScoped<IValidator<CreateWorkSpaceRequest>, WorkspaceValidator>();
+            builder.Services.AddScoped<IValidator<CreateChannelRequest>, CreateChannelValidator>();
+            builder.Services.AddScoped<IValidator<UpdateChannelRequest>, UpdateChannelValidator>();
 
             builder.Services.AddJwtAuthentication(builder.Configuration);
 
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<ITokenService, TokenService>();
+            builder.Services.AddScoped<IWorkspaceService, WorkspaceService>();
+            builder.Services.AddScoped<IChannelService, ChannelService>();
 
             var app = builder.Build();
 
