@@ -48,14 +48,16 @@ namespace NaturalSpaceApi.Controllers
             Guid workspaceId,
             [FromBody] UpdateWorkspaceRequest request)
         {
-            var workspace = await _workspaceService.UpdateWorkspace(workspaceId, request);
+            var userId = GetCurrentUserId();
+            var workspace = await _workspaceService.UpdateWorkspace(workspaceId, request, userId);
             return Ok(workspace);
         }
 
         [HttpDelete("{workspaceId}")]
         public async Task<ActionResult> DeleteWorkspace(Guid workspaceId)
         {
-            await _workspaceService.DeleteWorkspaceAsync(workspaceId);
+            var userId = GetCurrentUserId();
+            await _workspaceService.DeleteWorkspaceAsync(workspaceId, userId);
             return NoContent();
         }
     }
