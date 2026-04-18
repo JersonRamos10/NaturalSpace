@@ -48,6 +48,7 @@ namespace NaturalSpaceApi
             builder.Services.AddScoped<IWorkspaceService, WorkspaceService>();
             builder.Services.AddScoped<IChannelService, ChannelService>();
             builder.Services.AddScoped<IMemberService, MemberService>();
+            builder.Services.AddScoped<IPermissionService, PermissionService>();
 
             var app = builder.Build();
 

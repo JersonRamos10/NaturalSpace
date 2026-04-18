@@ -13,46 +13,29 @@ namespace NaturalSpaceApi.Application.Services
     public class MemberService : IMemberService
     {
         private readonly NaturalSpaceContext _context;
+        private readonly IPermissionService _permissions;
 
-        public MemberService(NaturalSpaceContext context)
+        public MemberService(
+            NaturalSpaceContext context,
+            IPermissionService permissions)
         {
             _context = context;
+            _permissions = permissions;
         }
 
         public async Task<UserResponse> AddMemberAsync(Guid workspaceId, Guid userId, Guid currentUserId)
         {
-            // 1. Verificar que el workspace existe
-            var workspace = await _context.WorkSpaces
-                .FirstOrDefaultAsync(w => w.Id == workspaceId && !w.IsDeleted);
+            // Solo Owner o Admin pueden agregar miembros
+            await _permissions.RequireAdminAccess(currentUserId, workspaceId);
 
-            if (workspace == null)
-            {
-                throw new NotFoundException("Workspace not found");
-            }
-
-            // 2. Verificar que el usuario actual tiene permisos (Owner o Admin)
-            var currentUserWorkspace = await _context.UserWorkSpaces
-                .FirstOrDefaultAsync(uw => uw.UserId == currentUserId && uw.WorkSpaceId == workspaceId);
-
-            if (currentUserWorkspace == null)
-            {
-                throw new UnauthorizedException("You are not a member of this workspace");
-            }
-
-            if (currentUserWorkspace.Role == Role.Member)
-            {
-                throw new UnauthorizedException("Only workspace owners and admins can add members");
-            }
-
-            // 3. Verificar que el usuario a agregar existe
+            // Verificar que el usuario a agregar existe
             var user = await _context.Users.FindAsync(userId);
-
             if (user == null)
             {
                 throw new NotFoundException("User not found");
             }
 
-            // 4. Verificar que el usuario no es ya miembro del workspace
+            // Verificar que no es ya miembro
             var existingMember = await _context.UserWorkSpaces
                 .FirstOrDefaultAsync(uw => uw.UserId == userId && uw.WorkSpaceId == workspaceId);
 
@@ -61,7 +44,7 @@ namespace NaturalSpaceApi.Application.Services
                 throw new ConflictException("User is already a member of this workspace");
             }
 
-            // 5. Crear la relación UserWorkSpace
+            // Crear membresía
             var userWorkSpace = new UserWorkSpace
             {
                 UserId = userId,
@@ -73,88 +56,54 @@ namespace NaturalSpaceApi.Application.Services
             await _context.UserWorkSpaces.AddAsync(userWorkSpace);
             await _context.SaveChangesAsync();
 
-            // 6. Retornar UserResponse mapeado desde el User entity
             return user.Adapt<UserResponse>();
         }
 
         public async Task RemoveMemberAsync(Guid workspaceId, Guid userId, Guid currentUserId)
         {
-            // 1. Verificar que el workspace existe
-            var workspace = await _context.WorkSpaces
-                .FirstOrDefaultAsync(w => w.Id == workspaceId && !w.IsDeleted);
-
-            if (workspace == null)
-            {
-                throw new NotFoundException("Workspace not found");
-            }
-
-            // 2. Verificar que el usuario actual tiene permisos
-            var currentUserWorkspace = await _context.UserWorkSpaces
-                .FirstOrDefaultAsync(uw => uw.UserId == currentUserId && uw.WorkSpaceId == workspaceId);
-
-            if (currentUserWorkspace == null)
-            {
-                throw new UnauthorizedException("You are not a member of this workspace");
-            }
-
-            // 3. Verificar que el usuario a eliminar existe en el workspace
-            var userWorkSpace = await _context.UserWorkSpaces
+            // Obtener datos de ambos usuarios
+            var currentUser = await _permissions.RequireMembership(currentUserId, workspaceId);
+            var userToRemove = await _context.UserWorkSpaces
                 .FirstOrDefaultAsync(uw => uw.UserId == userId && uw.WorkSpaceId == workspaceId);
 
-            if (userWorkSpace == null)
+            if (userToRemove == null)
             {
                 throw new NotFoundException("User is not a member of this workspace");
             }
 
-            // 4. Validar permisos según el rol
+            // Validar permisos según el caso
             if (currentUserId != userId)
             {
-                // Si no se está eliminando a sí mismo, verificar permisos
-                if (currentUserWorkspace.Role == Role.Member)
+                // Está eliminando a otro: necesita ser Owner o Admin
+                if (currentUser.Role == Role.Member)
                 {
                     throw new UnauthorizedException("Only workspace owners and admins can remove members");
                 }
 
-                // Un admin no puede eliminar al Owner
-                if (userWorkSpace.Role == Role.Owner && currentUserWorkspace.Role == Role.Admin)
+                // Admin no puede eliminar al Owner
+                if (userToRemove.Role == Role.Owner && currentUser.Role == Role.Admin)
                 {
                     throw new UnauthorizedException("Admins cannot remove the workspace owner");
                 }
             }
             else
             {
-                // Si se está eliminando a sí mismo
-                if (userWorkSpace.Role == Role.Owner)
+                // Se está eliminando a sí mismo
+                if (userToRemove.Role == Role.Owner)
                 {
                     throw new UnauthorizedException("Workspace owner cannot leave the workspace. Transfer ownership first or delete the workspace.");
                 }
             }
 
-            _context.UserWorkSpaces.Remove(userWorkSpace);
+            _context.UserWorkSpaces.Remove(userToRemove);
             await _context.SaveChangesAsync();
         }
 
         public async Task<IEnumerable<MemberResponse>> GetMembersAsync(Guid workspaceId, Guid currentUserId)
         {
-            // 1. Verificar que el workspace existe
-            var workspace = await _context.WorkSpaces
-                .FirstOrDefaultAsync(w => w.Id == workspaceId && !w.IsDeleted);
+            // Cualquier miembro puede ver la lista
+            await _permissions.RequireMembership(currentUserId, workspaceId);
 
-            if (workspace == null)
-            {
-                throw new NotFoundException("Workspace not found");
-            }
-
-            // 2. Verificar que el usuario actual es miembro del workspace
-            var currentUserWorkspace = await _context.UserWorkSpaces
-                .FirstOrDefaultAsync(uw => uw.UserId == currentUserId && uw.WorkSpaceId == workspaceId);
-
-            if (currentUserWorkspace == null)
-            {
-                throw new UnauthorizedException("You are not a member of this workspace");
-            }
-
-            // 3. Obtener todos los miembros con sus datos de usuario
             var members = await _context.UserWorkSpaces
                 .Where(uw => uw.WorkSpaceId == workspaceId)
                 .Include(uw => uw.User)

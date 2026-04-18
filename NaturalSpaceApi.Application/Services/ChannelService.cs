@@ -15,15 +15,18 @@ namespace NaturalSpaceApi.Application.Services
         private readonly NaturalSpaceContext _context;
         private readonly IValidator<CreateChannelRequest> _createValidator;
         private readonly IValidator<UpdateChannelRequest> _updateValidator;
+        private readonly IPermissionService _permissions;
 
         public ChannelService(
             NaturalSpaceContext context,
             IValidator<CreateChannelRequest> createValidator,
-            IValidator<UpdateChannelRequest> updateValidator)
+            IValidator<UpdateChannelRequest> updateValidator,
+            IPermissionService permissions)
         {
             _context = context;
             _createValidator = createValidator;
             _updateValidator = updateValidator;
+            _permissions = permissions;
         }
 
         public async Task<ChannelResponse> CreateChannelAsync(
@@ -31,33 +34,26 @@ namespace NaturalSpaceApi.Application.Services
             Guid workspaceId, 
             Guid userId)
         {
-            // 1. Validar request
+            // Validar request
             var validationResult = await _createValidator.ValidateAsync(channelRequest);
             if (!validationResult.IsValid)
             {
                 throw new ValidationException(validationResult.Errors);
             }
 
-            // 2. Verificar que el workspace existe
+            // Solo Owner o Admin pueden crear canales
+            await _permissions.RequireAdminAccess(userId, workspaceId);
+
+            // Verificar que el workspace existe
             var workspace = await _context.WorkSpaces
-                .FirstOrDefaultAsync(w => w.Id == workspaceId && !w.IsDeleted) 
-                        ?? throw new NotFoundException("Workspace not found");
-
-            // 3. LÓGICA DE PERMISOS: Verificar que el usuario es Owner o Admin del workspace
-            var userWorkspace = await _context.UserWorkSpaces
-                .FirstOrDefaultAsync(uw => uw.UserId == userId && uw.WorkSpaceId == workspaceId);
-
-            if (userWorkspace == null)
+                .FirstOrDefaultAsync(w => w.Id == workspaceId && !w.IsDeleted);
+                
+            if (workspace == null)
             {
-                throw new UnauthorizedException("You are not a member of this workspace");
+                throw new NotFoundException("Workspace not found");
             }
 
-            if (userWorkspace.Role == Role.Member)
-            {
-                throw new UnauthorizedException("Only Owner or Admin can create channels");
-            }
-
-            // 4. Crear el canal
+            // Crear el canal
             var channel = new Channel
             {
                 Id = Guid.NewGuid(),
@@ -79,14 +75,14 @@ namespace NaturalSpaceApi.Application.Services
             UpdateChannelRequest channelRequest,
             Guid userId)
         {
-            // 1. Validar request
+            // Validar request
             var validationResult = await _updateValidator.ValidateAsync(channelRequest);
             if (!validationResult.IsValid)
             {
                 throw new ValidationException(validationResult.Errors);
             }
 
-            // 2. Buscar el canal
+            // Buscar el canal
             var channel = await _context.Channels
                 .FirstOrDefaultAsync(c => c.Id == channelId && !c.IsDeleted);
                 
@@ -95,21 +91,10 @@ namespace NaturalSpaceApi.Application.Services
                 throw new NotFoundException("Channel not found");
             }
 
-            // 3. LÓGICA DE PERMISOS: Verificar que el usuario es Owner o Admin del workspace
-            var userWorkspace = await _context.UserWorkSpaces
-                .FirstOrDefaultAsync(uw => uw.UserId == userId && uw.WorkSpaceId == channel.WorkSpaceId);
+            // Solo Owner o Admin pueden actualizar canales
+            await _permissions.RequireAdminAccess(userId, channel.WorkSpaceId);
 
-            if (userWorkspace == null)
-            {
-                throw new UnauthorizedException("You are not a member of this workspace");
-            }
-
-            if (userWorkspace.Role == Role.Member)
-            {
-                throw new UnauthorizedException("Only Owner or Admin can update channels");
-            }
-
-            // 4. Actualizar propiedades (solo si se proporcionan)
+            // Actualizar propiedades
             if (!string.IsNullOrEmpty(channelRequest.Name))
             {
                 channel.Name = channelRequest.Name;
@@ -127,7 +112,7 @@ namespace NaturalSpaceApi.Application.Services
 
         public async Task DeleteChannelAsync(Guid channelId, Guid userId)
         {
-            // 1. Buscar el canal
+            // Buscar el canal
             var channel = await _context.Channels
                 .FirstOrDefaultAsync(c => c.Id == channelId && !c.IsDeleted);
                 
@@ -136,21 +121,10 @@ namespace NaturalSpaceApi.Application.Services
                 throw new NotFoundException("Channel not found");
             }
 
-            // 2. LÓGICA DE PERMISOS: Verificar que el usuario es Owner o Admin del workspace
-            var userWorkspace = await _context.UserWorkSpaces
-                .FirstOrDefaultAsync(uw => uw.UserId == userId && uw.WorkSpaceId == channel.WorkSpaceId);
+            // Solo Owner o Admin pueden eliminar canales
+            await _permissions.RequireAdminAccess(userId, channel.WorkSpaceId);
 
-            if (userWorkspace == null)
-            {
-                throw new UnauthorizedException("You are not a member of this workspace");
-            }
-
-            if (userWorkspace.Role == Role.Member)
-            {
-                throw new UnauthorizedException("Only Owner or Admin can delete channels");
-            }
-
-            // 3. Soft delete
+            // Soft delete
             channel.IsDeleted = true;
             channel.DeletedAt = DateTime.UtcNow;
 
@@ -159,7 +133,7 @@ namespace NaturalSpaceApi.Application.Services
 
         public async Task<ChannelResponse> GetByIdAsync(Guid channelId, Guid userId)
         {
-            // 1. Buscar el canal
+            // Buscar el canal
             var channel = await _context.Channels
                 .Include(c => c.Members)
                 .FirstOrDefaultAsync(c => c.Id == channelId && !c.IsDeleted);
@@ -169,16 +143,10 @@ namespace NaturalSpaceApi.Application.Services
                 throw new NotFoundException("Channel not found");
             }
 
-            // 2. Verificar que el usuario es miembro del workspace
-            var userWorkspace = await _context.UserWorkSpaces
-                .FirstOrDefaultAsync(uw => uw.UserId == userId && uw.WorkSpaceId == channel.WorkSpaceId);
+            // Cualquier miembro del workspace puede ver
+            await _permissions.RequireMembership(userId, channel.WorkSpaceId);
 
-            if (userWorkspace == null)
-            {
-                throw new UnauthorizedException("You are not a member of this workspace");
-            }
-
-            // VISIBILIDAD: Si es privado, verificar que es miembro del canal
+            // Si es privado, verificar que sea miembro del canal
             if (channel.IsPrivate)
             {
                 var isChannelMember = channel.Members.Any(m => m.UserId == userId);
@@ -195,36 +163,24 @@ namespace NaturalSpaceApi.Application.Services
             Guid workspaceId, 
             Guid userId)
         {
-            // 1. Verificar que el usuario es miembro del workspace
-            var userWorkspace = await _context.UserWorkSpaces
-                .FirstOrDefaultAsync(uw => uw.UserId == userId && uw.WorkSpaceId == workspaceId);
+            // Cualquier miembro puede ver la lista de canales
+            await _permissions.RequireMembership(userId, workspaceId);
 
-            if (userWorkspace == null)
-            {
-                throw new UnauthorizedException("You are not a member of this workspace");
-            }
-
-            // 2. Obtener todos los canales del workspace
             var channels = await _context.Channels
                 .Include(c => c.Members)
                 .Where(c => c.WorkSpaceId == workspaceId && !c.IsDeleted)
                 .ToListAsync();
 
-            //  VISIBILIDAD: Filtrar según privacidad
+            // Filtrar según privacidad
             var visibleChannels = channels.Where(c =>
             {
-                // Canales públicos: visibles para todos
-                if (!c.IsPrivate) 
-                    return true;
-                
-                // Canales privados: solo visibles para miembros
+                if (!c.IsPrivate) return true;
                 return c.Members.Any(m => m.UserId == userId);
             });
 
             return visibleChannels.Adapt<IEnumerable<ChannelResponse>>();
         }
 
-        // Método helper para verificar permisos (puede usarse en el controller antes de llamar a UpdateChannelAsync)
         public async Task VerifyUserCanModifyChannel(Guid channelId, Guid userId)
         {
             var channel = await _context.Channels
@@ -235,18 +191,7 @@ namespace NaturalSpaceApi.Application.Services
                 throw new NotFoundException("Channel not found");
             }
 
-            var userWorkspace = await _context.UserWorkSpaces
-                .FirstOrDefaultAsync(uw => uw.UserId == userId && uw.WorkSpaceId == channel.WorkSpaceId);
-
-            if (userWorkspace == null)
-            {
-                throw new UnauthorizedException("You are not a member of this workspace");
-            }
-
-            if (userWorkspace.Role == Role.Member)
-            {
-                throw new UnauthorizedException("Only Owner or Admin can modify channels");
-            }
+            await _permissions.RequireAdminAccess(userId, channel.WorkSpaceId);
         }
     }
 }

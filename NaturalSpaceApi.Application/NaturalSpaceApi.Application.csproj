@@ -21,8 +21,4 @@
     <ProjectReference Include="..\NaturalSpaceApi.Infraestructure\NaturalSpaceApi.Infrastructure.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Mapping\" />
-  </ItemGroup>
-
 </Project>
