@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using BCrypt.Net;
 using Microsoft.EntityFrameworkCore;
 using NaturalSpaceApi.Application.DTOs;
@@ -47,13 +47,31 @@ namespace NaturalSpaceApi.Application.Services
 
             var token = _tokenService.GenerateToken(user);
 
+
+            //generar refresh token y guardarlo en la base de datos
+
+            var refreshToken = _tokenService.GenerateRefreshTokenAsync();
+
+            var refreshTokenEntity = new RefreshToken
+            {
+                UserId = user.Id,
+                Token = refreshToken,
+                ExpiresDate = DateTime.UtcNow.AddDays(7),
+                Created = DateTime.UtcNow
+            };
+
+            // Guardar el refresh token en la base de datos
+            _context.RefreshTokens.Add(refreshTokenEntity);
+            await _context.SaveChangesAsync();
+
             //retornar el token y la fecha de expiracion
 
             var response = new AuthResponse
             ( 
                 Token: token,
-                Expiration: DateTime.UtcNow.AddHours(1)
-             
+                Expiration: DateTime.UtcNow.AddHours(1),
+                RefreshToken: refreshToken,
+                RefreshTokenExpiration: DateTime.UtcNow.AddDays(7)
              ); 
 
             return  response;
@@ -89,6 +107,30 @@ namespace NaturalSpaceApi.Application.Services
          
             return user.Adapt<UserResponse>();
 
+        }
+
+
+        public async Task<bool> LogoutAsync(LogoutRequest logoutRequest)
+        {
+            // Buscar el refresh token en la bd
+            var refreshToken = await _context.RefreshTokens
+                .FirstOrDefaultAsync(rt => rt.Token == logoutRequest.RefreshToken);
+
+            // Si no existe el token, retornar false
+            if (refreshToken == null)
+                return false;
+
+            // Si ya está revocado, retornar false
+            if (refreshToken.IsRevoked)
+                return false;
+
+            // Revocar el token (marcar la fecha de revocación)
+            refreshToken.Revoked = DateTime.UtcNow;
+
+            // Guardar cambios
+            await _context.SaveChangesAsync();
+
+            return true;
         }
 
 

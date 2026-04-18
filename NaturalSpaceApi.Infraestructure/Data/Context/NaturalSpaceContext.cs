@@ -13,6 +13,7 @@ namespace NaturalSpaceApi.Infrastructure.Data.Context
         public DbSet<UserWorkSpace> UserWorkSpaces { get; set; }
         public DbSet<Message> Messages { get; set; }
         public DbSet<Domain.Entities.File> Files { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         public NaturalSpaceContext(DbContextOptions<NaturalSpaceContext> options) : base(options)
         {
@@ -30,6 +31,7 @@ namespace NaturalSpaceApi.Infrastructure.Data.Context
             modelBuilder.ApplyConfiguration(new UserWorkSpaceConfiguration());
             modelBuilder.ApplyConfiguration(new MessageConfiguration());
             modelBuilder.ApplyConfiguration(new FileConfiguration());
+            modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
         }
     }
 }

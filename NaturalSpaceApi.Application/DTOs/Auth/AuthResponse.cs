@@ -6,6 +6,8 @@ namespace NaturalSpaceApi.Application.DTOs
 {
     public sealed record AuthResponse(
      string Token,
-     DateTime Expiration
+     DateTime Expiration,
+     string RefreshToken,   
+     DateTime RefreshTokenExpiration
     );
 }

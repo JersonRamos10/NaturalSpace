@@ -4,10 +4,11 @@ using System.Text;
 
 namespace NaturalSpaceApi.Application.DTOs.Workspace
 {
-    public sealed record CreateWorkSpaceRequest
+    public sealed record UpdateWorkspaceRequest
     (
-        string Name,
-        string Description
+        string? Name,
+        string? Description
 
     );
+    
 }

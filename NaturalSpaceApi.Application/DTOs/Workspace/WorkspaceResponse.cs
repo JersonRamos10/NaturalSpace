@@ -4,10 +4,8 @@ using System.Text;
 
 namespace NaturalSpaceApi.Application.DTOs.Workspace
 {
-    public sealed record CreateWorkSpaceRequest
+    public sealed record WorkspaceResponse
     (
-        string Name,
-        string Description
-
+        Guid workspaceId
     );
 }

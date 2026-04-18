@@ -9,9 +9,8 @@ namespace NaturalSpaceApi.Application.Interfaces
     public interface ITokenService
     {
         string GenerateToken(User user);
-        Task<AuthResponse> RefreshTokenAsync(string token, string ipAddress);
+        string GenerateRefreshTokenAsync();
 
-        Task RevokeTokenAsync(string token, string ipAddress);
 
     }
 }

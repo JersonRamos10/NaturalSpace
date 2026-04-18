@@ -19,6 +19,9 @@ namespace NaturalSpaceApi.Infrastructure.Configurations
                 .IsRequired()
                 .HasMaxLength(100);
 
+            builder.Property(w => w.Description)
+                .HasMaxLength(100);
+
             builder.Property(w => w.IsDeleted)
                 .IsRequired()
                 .HasDefaultValue(false);
@@ -27,6 +30,8 @@ namespace NaturalSpaceApi.Infrastructure.Configurations
 
             builder.Property(w => w.CreatedAt)
                 .IsRequired();
+
+            builder.Property(w => w.UpdatedAt);
 
             builder.Property(w => w.OwnerId)
                 .IsRequired();

@@ -1,4 +1,4 @@
-﻿using NaturalSpaceApi.Application.DTOs;
+using NaturalSpaceApi.Application.DTOs;
 using NaturalSpaceApi.Application.DTOs.Auth;
 
 
@@ -9,5 +9,7 @@ namespace NaturalSpaceApi.Application.Interfaces
         Task<UserResponse> RegisterAsync (RegisterRequest registerRequest);
 
         Task<AuthResponse> LoginAsync(LoginRequest loginRequest);
+
+        Task<bool> LogoutAsync(LogoutRequest logoutRequest);
     }
 }

@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Runtime;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
@@ -24,6 +25,8 @@ namespace NaturalSpaceApi.Application.Services
         {
             _settings = settings.Value;
         }
+
+    
         public string GenerateToken(User user)
         {
             var claims = new List<Claim>
@@ -31,7 +34,7 @@ namespace NaturalSpaceApi.Application.Services
                 new (JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new (JwtRegisteredClaimNames.Email, user.Email),
                 new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-               
+
             };
 
 
@@ -58,14 +61,17 @@ namespace NaturalSpaceApi.Application.Services
 
         }
 
-        public Task<AuthResponse> RefreshTokenAsync(string token, string ipAddress)
+        public string GenerateRefreshTokenAsync()
         {
-            throw new NotImplementedException();
+         
+            var randomBytes = new byte[32];
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(randomBytes);
+            }
+            return Convert.ToBase64String(randomBytes);
+        
         }
 
-        public Task RevokeTokenAsync(string token, string ipAddress)
-        {
-            throw new NotImplementedException();
-        }
-    }
+    } 
 }

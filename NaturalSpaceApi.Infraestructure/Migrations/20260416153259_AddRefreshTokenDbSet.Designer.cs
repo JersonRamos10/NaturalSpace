@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NaturalSpaceApi.Infrastructure.Data.Context;
 
@@ -11,9 +12,11 @@ using NaturalSpaceApi.Infrastructure.Data.Context;
 namespace NaturalSpaceApi.Infrastructure.Migrations
 {
     [DbContext(typeof(NaturalSpaceContext))]
-    partial class NaturalSpaceContextModelSnapshot : ModelSnapshot
+    [Migration("20260416153259_AddRefreshTokenDbSet")]
+    partial class AddRefreshTokenDbSet
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -281,11 +284,6 @@ namespace NaturalSpaceApi.Infrastructure.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -298,9 +296,6 @@ namespace NaturalSpaceApi.Infrastructure.Migrations
 
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 

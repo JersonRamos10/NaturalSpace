@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NaturalSpaceApi.Infrastructure.Data.Context;
 
@@ -11,9 +12,11 @@ using NaturalSpaceApi.Infrastructure.Data.Context;
 namespace NaturalSpaceApi.Infrastructure.Migrations
 {
     [DbContext(typeof(NaturalSpaceContext))]
-    partial class NaturalSpaceContextModelSnapshot : ModelSnapshot
+    [Migration("20260414161107_RemoveIpAndReasonFromRefreshToken")]
+    partial class RemoveIpAndReasonFromRefreshToken
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -164,45 +167,6 @@ namespace NaturalSpaceApi.Infrastructure.Migrations
                     b.ToTable("Messages", (string)null);
                 });
 
-            modelBuilder.Entity("NaturalSpaceApi.Domain.Entities.RefreshToken", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("Created")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("ExpiresDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ReplacedByToken")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("Revoked")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Token")
-                        .IsUnique();
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("RefreshTokens", (string)null);
-                });
-
             modelBuilder.Entity("NaturalSpaceApi.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -281,11 +245,6 @@ namespace NaturalSpaceApi.Infrastructure.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -298,9 +257,6 @@ namespace NaturalSpaceApi.Infrastructure.Migrations
 
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -384,17 +340,6 @@ namespace NaturalSpaceApi.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Channel");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("NaturalSpaceApi.Domain.Entities.RefreshToken", b =>
-                {
-                    b.HasOne("NaturalSpaceApi.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.Navigation("User");
                 });

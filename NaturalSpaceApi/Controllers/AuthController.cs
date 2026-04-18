@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NaturalSpaceApi.Application.DTOs.Auth;
 using NaturalSpaceApi.Application.Interfaces;
@@ -30,6 +30,17 @@ namespace NaturalSpaceApi.Controllers
 
             return Ok(result);
 
+        }
+
+        [HttpPost("logout")]
+        public async Task<ActionResult> LogoutAsync([FromBody] LogoutRequest request)
+        {
+            var result = await _authService.LogoutAsync(request);
+
+            if (!result)
+                return BadRequest(new { message = "Invalid or already revoked token" });
+
+            return Ok(new { message = "Logout successful" });
         }
     }
 }
