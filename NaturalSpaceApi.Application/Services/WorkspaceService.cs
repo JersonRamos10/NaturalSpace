@@ -1,10 +1,11 @@
 using FluentValidation;
+using Mapster;
+using Microsoft.EntityFrameworkCore;
 using NaturalSpaceApi.Application.DTOs.Workspace;
 using NaturalSpaceApi.Application.Interfaces;
 using NaturalSpaceApi.Infrastructure.Data.Context;
 using NaturalSpaceApi.Domain.Entities;
 using NaturalSpaceApi.Application.Exceptions;
-using Mapster;
 using NaturalSpaceApi.Domain.Enum;
 
 namespace NaturalSpaceApi.Application.Services
@@ -16,7 +17,7 @@ namespace NaturalSpaceApi.Application.Services
         private readonly IPermissionService _permissions;
 
         public WorkspaceService(
-            IValidator<CreateWorkSpaceRequest> validator, 
+            IValidator<CreateWorkSpaceRequest> validator,
             NaturalSpaceContext context,
             IPermissionService permissions)
         {
@@ -27,7 +28,6 @@ namespace NaturalSpaceApi.Application.Services
 
         public async Task<WorkspaceResponse> CreateWorkspaceAsync(CreateWorkSpaceRequest spaceRequest, Guid userId)
         {
-            // validate the request
             var validationResult = await _validator.ValidateAsync(spaceRequest);
 
             if (!validationResult.IsValid)
@@ -35,7 +35,6 @@ namespace NaturalSpaceApi.Application.Services
                 throw new ValidationException(validationResult.Errors);
             }
 
-            // create the workspace entity
             var workspace = new WorkSpace
             {
                 Name = spaceRequest.Name,
@@ -47,10 +46,10 @@ namespace NaturalSpaceApi.Application.Services
                     new UserWorkSpace
                     {
                         UserId = userId,
-                        Role = Role.Owner, 
+                        Role = Role.Owner,
                         JoinedAt = DateTime.UtcNow
                     }
-                }   
+                }
             };
 
             await _context.WorkSpaces.AddAsync(workspace);
@@ -61,7 +60,6 @@ namespace NaturalSpaceApi.Application.Services
 
         public async Task DeleteWorkspaceAsync(Guid workspaceId, Guid userId)
         {
-            // Solo el Owner puede eliminar el workspace
             await _permissions.RequireOwnership(userId, workspaceId);
 
             var workspace = await _context.WorkSpaces.FindAsync(workspaceId);
@@ -89,9 +87,20 @@ namespace NaturalSpaceApi.Application.Services
             return workspace.Adapt<WorkspaceResponse>();
         }
 
+        public async Task<IEnumerable<WorkspaceResponse>> GetWorkspacesByUserAsync(Guid userId)
+        {
+            var workspaces = await _context.UserWorkSpaces
+                .Where(uw => uw.UserId == userId)
+                .Include(uw => uw.WorkSpace)
+                .Where(uw => !uw.WorkSpace.IsDeleted)
+                .Select(uw => uw.WorkSpace)
+                .ToListAsync();
+
+            return workspaces.Adapt<IEnumerable<WorkspaceResponse>>();
+        }
+
         public async Task<WorkspaceResponse> UpdateWorkspace(Guid workspaceId, UpdateWorkspaceRequest request, Guid userId)
         {
-            // Solo Owner o Admin pueden actualizar
             await _permissions.RequireAdminAccess(userId, workspaceId);
 
             var workspace = await _context.WorkSpaces.FindAsync(workspaceId);
@@ -101,10 +110,9 @@ namespace NaturalSpaceApi.Application.Services
                 throw new NotFoundException("Workspace not found");
             }
 
-            // update the workspace properties
             workspace.Name = request.Name ?? workspace.Name;
             workspace.Description = request.Description ?? workspace.Description;
-            workspace.UpdatedAt = DateTime.UtcNow;  
+            workspace.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 

@@ -8,7 +8,6 @@ using NaturalSpaceApi.Domain.Entities;
 using NaturalSpaceApi.Application.Exceptions;
 using NaturalSpaceApi.Infrastructure.Data.Context;
 
-
 using Mapster;
 
 namespace NaturalSpaceApi.Application.Services
@@ -16,9 +15,7 @@ namespace NaturalSpaceApi.Application.Services
     public class AuthService : IAuthService
     {
         private readonly NaturalSpaceContext _context;
-
         private readonly IValidator<RegisterRequest> _validator;
-
         private readonly ITokenService _tokenService;
 
         public AuthService(
@@ -33,23 +30,19 @@ namespace NaturalSpaceApi.Application.Services
 
         public async Task<AuthResponse> LoginAsync(LoginRequest loginRequest)
         {
+            var user = await _context.Users
+                .Where(u => u.Email == loginRequest.Email || u.UserName == loginRequest.UserName)
+                .FirstOrDefaultAsync();
 
-            //validar si el usuario existe por email o username
-            var user = _context.Users.Where(u => u.Email == loginRequest.Email || u.UserName == loginRequest.UserName)
-                                            .FirstOrDefault();
-            if(user == null)
-                throw new NotFoundException($"User not found, email or username incorrect");
+            if (user == null)
+                throw new UnauthorizedException("User not found, email or username incorrect");
 
-            //verificar la contraseña
-            bool  isPasswordValid = BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.PasswordHash);
+            bool isPasswordValid = BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.PasswordHash);
 
-            //generar el token de autenticacion
+            if (!isPasswordValid)
+                throw new UnauthorizedException("Invalid credentials");
 
             var token = _tokenService.GenerateToken(user);
-
-
-            //generar refresh token y guardarlo en la base de datos
-
             var refreshToken = _tokenService.GenerateRefreshTokenAsync();
 
             var refreshTokenEntity = new RefreshToken
@@ -60,102 +53,110 @@ namespace NaturalSpaceApi.Application.Services
                 Created = DateTime.UtcNow
             };
 
-            // Guardar el refresh token en la base de datos
             _context.RefreshTokens.Add(refreshTokenEntity);
             await _context.SaveChangesAsync();
 
-            //retornar el token y la fecha de expiracion
-
-            var response = new AuthResponse
-            ( 
+            return new AuthResponse(
                 Token: token,
                 Expiration: DateTime.UtcNow.AddHours(1),
                 RefreshToken: refreshToken,
                 RefreshTokenExpiration: DateTime.UtcNow.AddDays(7)
-             ); 
-
-            return  response;
+            );
         }
 
         public async Task<UserResponse> RegisterAsync(RegisterRequest registerRequest)
         {
-            //validar el request
             var validationResult = _validator.Validate(registerRequest);
 
-            if (validationResult.IsValid == false)
+            if (!validationResult.IsValid)
             {
                 throw new ValidationException(validationResult.Errors);
             }
 
-            //validacion de negocio - verificar si el email o username ya existen 
             var emailExist = await _context.Users.AnyAsync(u => u.Email == registerRequest.Email);
-                if (emailExist)
-                  throw new ConflictException($"Email already in used");
-           
+            if (emailExist)
+                throw new ConflictException("Email already in use");
 
             var userExist = await _context.Users.AnyAsync(u => u.UserName == registerRequest.UserName);
-
             if (userExist)
-                throw new ConflictException($"Username [{registerRequest.UserName}] is already in Used");
+                throw new ConflictException($"Username [{registerRequest.UserName}] is already in use");
 
+            var user = createUser(registerRequest);
 
-            var user = createUser(registerRequest);//invocar el metodo privado para crear un nuevo usuario
-
-            _context.Users.Add(user);    
+            _context.Users.Add(user);
             await _context.SaveChangesAsync();
-            
-         
-            return user.Adapt<UserResponse>();
 
+            return user.Adapt<UserResponse>();
         }
 
-
-        public async Task<bool> LogoutAsync(LogoutRequest logoutRequest)
+        public async Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request)
         {
-            // Buscar el refresh token en la bd
+            var refreshTokenEntity = await _context.RefreshTokens
+                .Include(rt => rt.User)
+                .FirstOrDefaultAsync(rt => rt.Token == request.RefreshToken);
+
+            if (refreshTokenEntity == null || !refreshTokenEntity.IsActive)
+            {
+                throw new UnauthorizedException("Invalid or expired refresh token");
+            }
+
+            var user = refreshTokenEntity.User;
+
+            var newToken = _tokenService.GenerateToken(user);
+            var newRefreshToken = _tokenService.GenerateRefreshTokenAsync();
+
+            // Revocar el token anterior
+            refreshTokenEntity.Revoked = DateTime.UtcNow;
+            refreshTokenEntity.ReplacedByToken = newRefreshToken;
+
+            // Crear nuevo refresh token
+            var newRefreshTokenEntity = new RefreshToken
+            {
+                UserId = user.Id,
+                Token = newRefreshToken,
+                ExpiresDate = DateTime.UtcNow.AddDays(7),
+                Created = DateTime.UtcNow
+            };
+
+            _context.RefreshTokens.Add(newRefreshTokenEntity);
+            await _context.SaveChangesAsync();
+
+            return new AuthResponse(
+                Token: newToken,
+                Expiration: DateTime.UtcNow.AddHours(1),
+                RefreshToken: newRefreshToken,
+                RefreshTokenExpiration: DateTime.UtcNow.AddDays(7)
+            );
+        }
+
+        public async Task LogoutAsync(LogoutRequest logoutRequest)
+        {
             var refreshToken = await _context.RefreshTokens
                 .FirstOrDefaultAsync(rt => rt.Token == logoutRequest.RefreshToken);
 
-            // Si no existe el token, retornar false
-            if (refreshToken == null)
-                return false;
+            if (refreshToken == null || refreshToken.IsRevoked)
+                throw new BadRequestException("Invalid or already revoked token");
 
-            // Si ya está revocado, retornar false
-            if (refreshToken.IsRevoked)
-                return false;
-
-            // Revocar el token (marcar la fecha de revocación)
             refreshToken.Revoked = DateTime.UtcNow;
-
-            // Guardar cambios
             await _context.SaveChangesAsync();
-
-            return true;
         }
 
-
-        //metodos privados de la clase 
-
-        //metodo privado para hashear la contraseña del usuario
         private string HashPassword(string password)
         {
-           string hashedPassword = BCrypt.Net.BCrypt.HashPassword(password);
-           
-            return hashedPassword;
+            return BCrypt.Net.BCrypt.HashPassword(password);
         }
 
-        //metodo privado para crear un nuevo usuario a partir del request de registro
         private User createUser(RegisterRequest request)
         {
-            return new User {
+            return new User
+            {
                 Name = request.Name,
                 UserName = request.UserName,
-                Email= request.Email,
+                Email = request.Email,
                 PasswordHash = HashPassword(request.Password),
                 AvatarUrl = null,
                 CreatedAt = DateTime.UtcNow
-            
             };
-        } 
+        }
     }
 }

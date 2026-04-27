@@ -18,7 +18,7 @@ namespace NaturalSpaceApi.Infrastructure.Configurations
                 .IsRequired()
                 .HasMaxLength(255);
 
-            builder.Property(f => f.FilePatch)
+            builder.Property(f => f.FilePath)
                 .IsRequired()
                 .HasMaxLength(500);
 

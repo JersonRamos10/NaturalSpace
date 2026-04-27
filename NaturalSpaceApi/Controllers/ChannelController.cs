@@ -46,19 +46,19 @@ namespace NaturalSpaceApi.Controllers
 
         [HttpPost]
         public async Task<ActionResult<ChannelResponse>> CreateChannel(
-            Guid workspaceId, 
+            Guid workspaceId,
             [FromBody] CreateChannelRequest request)
         {
             var userId = GetCurrentUserId();
             var channel = await _channelService.CreateChannelAsync(request, workspaceId, userId);
-            return CreatedAtAction(nameof(GetChannelById), 
-                new { workspaceId, channelId = channel.Id }, 
+            return CreatedAtAction(nameof(GetChannelById),
+                new { workspaceId, channelId = channel.Id },
                 channel);
         }
 
         [HttpPut("{channelId}")]
         public async Task<ActionResult<ChannelResponse>> UpdateChannel(
-            Guid channelId, 
+            Guid channelId,
             [FromBody] UpdateChannelRequest request)
         {
             var userId = GetCurrentUserId();

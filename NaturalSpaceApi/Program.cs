@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using NaturalSpaceApi.Application.DTOs.Auth;
 using NaturalSpaceApi.Application.DTOs.Channel;
+using NaturalSpaceApi.Application.DTOs.Message;
 using NaturalSpaceApi.Application.DTOs.Workspace;
 using NaturalSpaceApi.Application.Interfaces;
 using NaturalSpaceApi.Application.Services;
@@ -40,6 +41,8 @@ namespace NaturalSpaceApi
             builder.Services.AddScoped<IValidator<CreateWorkSpaceRequest>, WorkspaceValidator>();
             builder.Services.AddScoped<IValidator<CreateChannelRequest>, CreateChannelValidator>();
             builder.Services.AddScoped<IValidator<UpdateChannelRequest>, UpdateChannelValidator>();
+            builder.Services.AddScoped<IValidator<CreateMessageRequest>, CreateMessageValidator>();
+            builder.Services.AddScoped<IValidator<UpdateMessageRequest>, UpdateMessageValidator>();
 
             builder.Services.AddJwtAuthentication(builder.Configuration);
 
@@ -48,7 +51,14 @@ namespace NaturalSpaceApi
             builder.Services.AddScoped<IWorkspaceService, WorkspaceService>();
             builder.Services.AddScoped<IChannelService, ChannelService>();
             builder.Services.AddScoped<IMemberService, MemberService>();
+            builder.Services.AddScoped<IMessageService, MessageService>();
+            builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
             builder.Services.AddScoped<IPermissionService, PermissionService>();
+
+            builder.WebHost.ConfigureKestrel(options =>
+            {
+                options.Limits.MaxRequestBodySize = 10485760; // 10 MB
+            });
 
             var app = builder.Build();
 
@@ -61,6 +71,8 @@ namespace NaturalSpaceApi
 
             app.UseAuthentication();
             app.UseAuthorization();
+
+            app.UseStaticFiles();
 
             app.MapControllers();
 

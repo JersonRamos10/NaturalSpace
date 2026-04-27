@@ -5,7 +5,6 @@ using NaturalSpaceApi.Application.DTOs.Channel;
 using NaturalSpaceApi.Application.Exceptions;
 using NaturalSpaceApi.Application.Interfaces;
 using NaturalSpaceApi.Domain.Entities;
-using NaturalSpaceApi.Domain.Enum;
 using NaturalSpaceApi.Infrastructure.Data.Context;
 
 namespace NaturalSpaceApi.Application.Services
@@ -30,30 +29,26 @@ namespace NaturalSpaceApi.Application.Services
         }
 
         public async Task<ChannelResponse> CreateChannelAsync(
-            CreateChannelRequest channelRequest, 
-            Guid workspaceId, 
+            CreateChannelRequest channelRequest,
+            Guid workspaceId,
             Guid userId)
         {
-            // Validar request
             var validationResult = await _createValidator.ValidateAsync(channelRequest);
             if (!validationResult.IsValid)
             {
                 throw new ValidationException(validationResult.Errors);
             }
 
-            // Solo Owner o Admin pueden crear canales
             await _permissions.RequireAdminAccess(userId, workspaceId);
 
-            // Verificar que el workspace existe
             var workspace = await _context.WorkSpaces
                 .FirstOrDefaultAsync(w => w.Id == workspaceId && !w.IsDeleted);
-                
+
             if (workspace == null)
             {
                 throw new NotFoundException("Workspace not found");
             }
 
-            // Crear el canal
             var channel = new Channel
             {
                 Id = Guid.NewGuid(),
@@ -71,30 +66,26 @@ namespace NaturalSpaceApi.Application.Services
         }
 
         public async Task<ChannelResponse> UpdateChannelAsync(
-            Guid channelId, 
+            Guid channelId,
             UpdateChannelRequest channelRequest,
             Guid userId)
         {
-            // Validar request
             var validationResult = await _updateValidator.ValidateAsync(channelRequest);
             if (!validationResult.IsValid)
             {
                 throw new ValidationException(validationResult.Errors);
             }
 
-            // Buscar el canal
             var channel = await _context.Channels
                 .FirstOrDefaultAsync(c => c.Id == channelId && !c.IsDeleted);
-                
+
             if (channel == null)
             {
                 throw new NotFoundException("Channel not found");
             }
 
-            // Solo Owner o Admin pueden actualizar canales
             await _permissions.RequireAdminAccess(userId, channel.WorkSpaceId);
 
-            // Actualizar propiedades
             if (!string.IsNullOrEmpty(channelRequest.Name))
             {
                 channel.Name = channelRequest.Name;
@@ -112,19 +103,16 @@ namespace NaturalSpaceApi.Application.Services
 
         public async Task DeleteChannelAsync(Guid channelId, Guid userId)
         {
-            // Buscar el canal
             var channel = await _context.Channels
                 .FirstOrDefaultAsync(c => c.Id == channelId && !c.IsDeleted);
-                
+
             if (channel == null)
             {
                 throw new NotFoundException("Channel not found");
             }
 
-            // Solo Owner o Admin pueden eliminar canales
             await _permissions.RequireAdminAccess(userId, channel.WorkSpaceId);
 
-            // Soft delete
             channel.IsDeleted = true;
             channel.DeletedAt = DateTime.UtcNow;
 
@@ -133,20 +121,17 @@ namespace NaturalSpaceApi.Application.Services
 
         public async Task<ChannelResponse> GetByIdAsync(Guid channelId, Guid userId)
         {
-            // Buscar el canal
             var channel = await _context.Channels
                 .Include(c => c.Members)
                 .FirstOrDefaultAsync(c => c.Id == channelId && !c.IsDeleted);
-                
+
             if (channel == null)
             {
                 throw new NotFoundException("Channel not found");
             }
 
-            // Cualquier miembro del workspace puede ver
             await _permissions.RequireMembership(userId, channel.WorkSpaceId);
 
-            // Si es privado, verificar que sea miembro del canal
             if (channel.IsPrivate)
             {
                 var isChannelMember = channel.Members.Any(m => m.UserId == userId);
@@ -160,10 +145,9 @@ namespace NaturalSpaceApi.Application.Services
         }
 
         public async Task<IEnumerable<ChannelResponse>> GetChannelsByWorkspaceAsync(
-            Guid workspaceId, 
+            Guid workspaceId,
             Guid userId)
         {
-            // Cualquier miembro puede ver la lista de canales
             await _permissions.RequireMembership(userId, workspaceId);
 
             var channels = await _context.Channels
@@ -171,7 +155,6 @@ namespace NaturalSpaceApi.Application.Services
                 .Where(c => c.WorkSpaceId == workspaceId && !c.IsDeleted)
                 .ToListAsync();
 
-            // Filtrar según privacidad
             var visibleChannels = channels.Where(c =>
             {
                 if (!c.IsPrivate) return true;
@@ -185,7 +168,7 @@ namespace NaturalSpaceApi.Application.Services
         {
             var channel = await _context.Channels
                 .FirstOrDefaultAsync(c => c.Id == channelId && !c.IsDeleted);
-                
+
             if (channel == null)
             {
                 throw new NotFoundException("Channel not found");

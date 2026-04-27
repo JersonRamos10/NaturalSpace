@@ -28,6 +28,14 @@ namespace NaturalSpaceApi.Controllers
             return Guid.Parse(userIdClaim);
         }
 
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<WorkspaceResponse>>> GetMyWorkspaces()
+        {
+            var userId = GetCurrentUserId();
+            var workspaces = await _workspaceService.GetWorkspacesByUserAsync(userId);
+            return Ok(workspaces);
+        }
+
         [HttpGet("{workspaceId}")]
         public async Task<ActionResult<WorkspaceResponse>> GetWorkspaceById(Guid workspaceId)
         {

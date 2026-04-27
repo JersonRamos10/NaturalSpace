@@ -25,6 +25,7 @@ namespace NaturalSpaceApi.Middleware
                 ConflictException => StatusCodes.Status409Conflict,
                 NotFoundException => StatusCodes.Status404NotFound,
                 UnauthorizedException => StatusCodes.Status401Unauthorized,
+                BadRequestException => StatusCodes.Status400BadRequest,
                 FluentValidation.ValidationException => StatusCodes.Status400BadRequest,
                 _ => StatusCodes.Status500InternalServerError
             };
